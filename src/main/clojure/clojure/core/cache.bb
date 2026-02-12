@@ -96,10 +96,15 @@
         fn-name (symbol (str "->" type-name))
         {:keys [proto-names proto-methods to-string-body]}
         (parse-defcache-specifics specifics)
-        transformed (proxy-methods-from-specifics proto-methods)]
+        transformed (proxy-methods-from-specifics proto-methods)
+        ;; proxy requires the protocol's generated interface class, not the protocol itself.
+        proto-interfaces (mapv (fn [p]
+                                 (let [m (meta (resolve p))]
+                                   (symbol (str (namespace-munge (:ns m)) "." (:name m)))))
+                               proto-names)]
     `(defn ~fn-name [~@fields]
        (proxy [clojure.lang.APersistentMap clojure.lang.IMeta clojure.lang.IObj
-               ~@proto-names] []
+               ~@proto-interfaces] []
          ~@transformed
          (~'valAt
            ([key#] (lookup ~'this key#))
